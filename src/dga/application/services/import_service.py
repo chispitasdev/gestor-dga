@@ -20,6 +20,7 @@ from typing import Any
 
 from src.dga.application.dto.sample_dto import CreateSampleDTO
 from src.dga.application.services.sample_service import SampleService
+from src.dga.domain.exceptions import DGADomainError
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,10 +90,10 @@ def _normalize_columns(columns: list[str]) -> dict[str, str]:
 
 def _parse_date(value: Any) -> date:
     """Parsea un valor a fecha. Acepta varios formatos."""
-    if isinstance(value, date):
-        return value
     if isinstance(value, datetime):
         return value.date()
+    if isinstance(value, date):
+        return value
 
     raw = str(value).strip()
     for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d"):
@@ -243,7 +244,7 @@ class ImportService:
                 self._sample_svc.register_sample(dto)
                 imported += 1
 
-            except Exception as exc:
+            except (DGADomainError, ValueError, TypeError) as exc:
                 skipped += 1
                 errors.append(f"Fila {i}: {exc}")
 

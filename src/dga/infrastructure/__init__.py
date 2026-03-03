@@ -1,1 +1,1 @@
-"""Capa de infraestructura: adaptadores concretos (persistencia, CLI)."""
+"""Capa de infraestructura: adaptadores concretos (persistencia, API, UI)."""

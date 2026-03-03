@@ -8,7 +8,7 @@ Produce:
     4. Analisis de concordancia normativo vs. IA.
     5. Exportacion a CSV de todas las tablas para inclusion en LaTeX.
 
-Disenado para ser invocado desde la CLI de validacion (opcion 9 del menu).
+Disenado para ser invocado desde la API REST o la interfaz Streamlit.
 """
 
 from __future__ import annotations

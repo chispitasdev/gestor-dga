@@ -3,8 +3,8 @@
 Uso:
     streamlit run main_ui.py
 
-Requiere que la API FastAPI este corriendo en http://127.0.0.1:8000
-    fastapi dev main_api.py --port 8000
+Requiere que la API FastAPI este corriendo:
+    fastapi dev main.py
 """
 
 from __future__ import annotations
@@ -27,8 +27,15 @@ def api_get(path: str, **kwargs):
         r = httpx.get(f"{API}{path}", timeout=30, **kwargs)
         r.raise_for_status()
         return r.json()
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except httpx.HTTPStatusError as e:
+        detail = e.response.text[:300]
+        st.error(f"Error {e.response.status_code}: {detail}")
+        return None
+    except httpx.RequestError as e:
+        st.error(f"Error de conexion: {e}")
+        return None
+    except ValueError as e:
+        st.error(f"Respuesta JSON invalida: {e}")
         return None
 
 
@@ -41,8 +48,11 @@ def api_post(path: str, **kwargs):
         detail = e.response.json().get("detail", str(e))
         st.error(f"Error {e.response.status_code}: {detail}")
         return None
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except httpx.RequestError as e:
+        st.error(f"Error de conexion: {e}")
+        return None
+    except ValueError as e:
+        st.error(f"Respuesta JSON invalida: {e}")
         return None
 
 
@@ -55,8 +65,11 @@ def api_put(path: str, **kwargs):
         detail = e.response.json().get("detail", str(e))
         st.error(f"Error {e.response.status_code}: {detail}")
         return None
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except httpx.RequestError as e:
+        st.error(f"Error de conexion: {e}")
+        return None
+    except ValueError as e:
+        st.error(f"Respuesta JSON invalida: {e}")
         return None
 
 
@@ -65,8 +78,12 @@ def api_delete(path: str):
         r = httpx.delete(f"{API}{path}", timeout=30)
         r.raise_for_status()
         return True
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except httpx.HTTPStatusError as e:
+        detail = e.response.text[:300]
+        st.error(f"Error {e.response.status_code}: {detail}")
+        return False
+    except httpx.RequestError as e:
+        st.error(f"Error de conexion: {e}")
         return False
 
 
@@ -80,8 +97,8 @@ def api_get_image(path: str) -> bytes | None:
         detail = e.response.text[:200]
         st.error(f"Error {e.response.status_code}: {detail}")
         return None
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except httpx.RequestError as e:
+        st.error(f"Error de conexion: {e}")
         return None
 
 
@@ -122,7 +139,7 @@ if page == "🏠 Inicio":
 
     **Funcionalidades:**
     - **6 metodos normativos**: IEEE C57.104, IEC 60599, Rogers, Dornenburg, Duval T1, Duval P1
-    - **4 modelos de IA**: Random Forest, SVM, KNN, Gradient Boosting
+    - **4 modelos de IA**: Random Forest, SVM, KNN, MLP
     - **Diagnostico unificado**: Combina normativo + IA
     - **Tendencias**: Analisis temporal de gases
     - **Validacion cruzada**: Comparacion de modelos y concordancia
@@ -349,7 +366,7 @@ elif page == "🤖 Inteligencia Artificial":
     tab1, tab2, tab3 = st.tabs(["Entrenar", "Clasificar", "Evaluar modelos"])
 
     with tab1:
-        st.markdown("Entrena los 4 modelos (Random Forest, SVM, KNN, Gradient Boosting) "
+        st.markdown("Entrena los 4 modelos (Random Forest, SVM, KNN, MLP) "
                      "con todas las muestras del repositorio.")
         if st.button("🚀 Entrenar modelos", type="primary"):
             with st.spinner("Entrenando..."):
@@ -618,5 +635,7 @@ elif page == "📥 Importar Excel":
                                 st.text(err)
                 except httpx.HTTPStatusError as e:
                     st.error(f"Error {e.response.status_code}: {e.response.text[:300]}")
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                except httpx.RequestError as e:
+                    st.error(f"Error de conexion: {e}")
+                except ValueError as e:
+                    st.error(f"Respuesta JSON invalida: {e}")

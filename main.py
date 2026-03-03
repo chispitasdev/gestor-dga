@@ -1,109 +1,77 @@
-"""Punto de entrada del sistema de diagnostico DGA.
-
-Composition Root: instancia todos los componentes concretos de
-infraestructura, los inyecta en los servicios de aplicacion y estos
-a su vez en los adaptadores CLI. Centraliza la configuracion de
-dependencias sin necesidad de un framework de inyeccion.
+"""Punto de entrada principal del sistema DGA (FastAPI + Streamlit).
 
 Uso:
-    python main.py
+    fastapi dev main.py              # Desarrollo (hot-reload)
+    fastapi run main.py              # Produccion
+
+UI Streamlit (requiere la API corriendo):
+    streamlit run main_ui.py
+
+Documentacion interactiva automatica:
+    http://127.0.0.1:8000/docs     (Swagger UI)
+    http://127.0.0.1:8000/redoc    (ReDoc)
 """
 
 from __future__ import annotations
 
-from pathlib import Path
+from fastapi import FastAPI
 
-from src.dga.application.services.sample_service import SampleService
-from src.dga.application.services.transformer_service import TransformerService
-from src.dga.application.services.normative_diagnosis_service import (
-    NormativeDiagnosisService,
+from src.dga.infrastructure.api.transformer_router import (
+    router as transformer_router,
 )
-from src.dga.application.services.import_service import ImportService
-from src.dga.application.services.trend_service import TrendService
-from src.dga.application.services.ai_engine.ai_service import AIService
-from src.dga.infrastructure.cli.main_menu import MainMenu
-from src.dga.infrastructure.cli.sample_cli import SampleCLI
-from src.dga.infrastructure.cli.transformer_cli import TransformerCLI
-from src.dga.infrastructure.cli.diagnosis_cli import DiagnosisCLI
-from src.dga.infrastructure.cli.import_cli import ImportCLI
-from src.dga.infrastructure.cli.trend_cli import TrendCLI
-from src.dga.infrastructure.cli.ai_cli import AICli
-from src.dga.application.services.unified_diagnosis_service import (
-    UnifiedDiagnosisService,
+from src.dga.infrastructure.api.sample_router import router as sample_router
+from src.dga.infrastructure.api.diagnosis_router import (
+    router as diagnosis_router,
 )
-from src.dga.infrastructure.cli.unified_diagnosis_cli import (
-    UnifiedDiagnosisCLI,
+from src.dga.infrastructure.api.import_router import router as import_router
+from src.dga.infrastructure.api.trend_router import router as trend_router
+from src.dga.infrastructure.api.ai_router import router as ai_router
+from src.dga.infrastructure.api.unified_router import (
+    router as unified_router,
 )
-from src.dga.infrastructure.cli.charts_cli import ChartsCLI
-from src.dga.application.services.validation_service import (
-    ValidationService,
-)
-from src.dga.infrastructure.cli.validation_cli import ValidationCLI
-from src.dga.infrastructure.persistence.sqlite_connection import (
-    get_connection,
-    initialize_database,
-)
-from src.dga.infrastructure.persistence.sqlite_sample_repository import (
-    SQLiteSampleRepository,
-)
-from src.dga.infrastructure.persistence.sqlite_transformer_repository import (
-    SQLiteTransformerRepository,
+from src.dga.infrastructure.api.charts_router import router as charts_router
+from src.dga.infrastructure.api.validation_router import (
+    router as validation_router,
 )
 
-# Ruta de la base de datos junto al ejecutable.
-_DB_PATH = Path(__file__).resolve().parent / "dga.db"
+app = FastAPI(
+    title="Sistema de Diagnostico DGA",
+    description=(
+        "API REST para el analisis de gases disueltos en aceite "
+        "de transformadores de potencia. Implementa 6 metodos "
+        "normativos internacionales y 4 modelos de Machine Learning."
+    ),
+    version="1.0.0",
+)
+
+# ── Registrar routers ──────────────────────────────────────────────
+app.include_router(transformer_router)
+app.include_router(sample_router)
+app.include_router(diagnosis_router)
+app.include_router(import_router)
+app.include_router(trend_router)
+app.include_router(ai_router)
+app.include_router(unified_router)
+app.include_router(charts_router)
+app.include_router(validation_router)
 
 
-def main() -> None:
-    """Configura las dependencias y arranca la aplicacion CLI."""
-    # -- Infraestructura: conexion y esquema --
-    connection = get_connection(_DB_PATH)
-    initialize_database(connection)
-
-    # -- Infraestructura: repositorios concretos --
-    transformer_repo = SQLiteTransformerRepository(connection)
-    sample_repo = SQLiteSampleRepository(connection)
-
-    # -- Aplicacion: servicios --
-    transformer_service = TransformerService(transformer_repo)
-    sample_service = SampleService(sample_repo, transformer_repo)
-    diagnosis_service = NormativeDiagnosisService()
-    import_service = ImportService(sample_service)
-    trend_service = TrendService()
-    ai_service = AIService(sample_repo, diagnosis_service)
-    unified_service = UnifiedDiagnosisService(diagnosis_service, ai_service)
-    validation_service = ValidationService(
-        diagnosis_service, ai_service, unified_service,
-    )
-
-    # -- Infraestructura: adaptadores CLI --
-    transformer_cli = TransformerCLI(transformer_service)
-    sample_cli = SampleCLI(sample_service, transformer_service)
-    diagnosis_cli = DiagnosisCLI(sample_service, diagnosis_service)
-    import_cli = ImportCLI(import_service, transformer_service)
-    trend_cli = TrendCLI(sample_service, transformer_service, trend_service)
-    ai_cli = AICli(ai_service, sample_service, transformer_service)
-    unified_cli = UnifiedDiagnosisCLI(
-        unified_service, sample_service, transformer_service,
-    )
-    charts_cli = ChartsCLI(
-        sample_service, transformer_service, trend_service, ai_service,
-    )
-    validation_cli = ValidationCLI(
-        validation_service, sample_service, transformer_service,
-    )
-
-    # -- Arranque --
-    menu = MainMenu(
-        transformer_cli, sample_cli,
-        diagnosis_cli, import_cli, trend_cli, ai_cli,
-        unified_cli, charts_cli, validation_cli,
-    )
-    try:
-        menu.run()
-    finally:
-        connection.close()
-
-
-if __name__ == "__main__":
-    main()
+@app.get("/", tags=["Root"])
+def root() -> dict:
+    """Endpoint raiz con informacion basica del sistema."""
+    return {
+        "sistema": "Diagnostico DGA",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "endpoints": {
+            "transformadores": "/api/transformers",
+            "muestras": "/api/samples",
+            "diagnostico_normativo": "/api/diagnosis",
+            "importacion": "/api/import",
+            "tendencias": "/api/trends",
+            "inteligencia_artificial": "/api/ai",
+            "diagnostico_unificado": "/api/unified",
+            "graficos": "/api/charts",
+            "validacion": "/api/validation",
+        },
+    }

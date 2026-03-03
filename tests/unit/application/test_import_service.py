@@ -1,7 +1,7 @@
 """Tests unitarios para ImportService."""
 
 import csv
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -65,6 +65,10 @@ class TestParseDate:
     def test_date_object(self) -> None:
         d = date(2024, 1, 1)
         assert _parse_date(d) == d
+
+    def test_datetime_object_returns_date(self) -> None:
+        dt = datetime(2024, 3, 15, 10, 30, 0)
+        assert _parse_date(dt) == date(2024, 3, 15)
 
     def test_invalid_raises(self) -> None:
         with pytest.raises(ValueError):

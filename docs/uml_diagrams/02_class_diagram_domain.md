@@ -135,6 +135,7 @@ classDiagram
     style DuplicateTransformerError fill:#ffeaea,stroke:#cc4444,color:#000
     style DuplicateSampleCodeError fill:#ffeaea,stroke:#cc4444,color:#000
     style InvalidGasValueError fill:#ffeaea,stroke:#cc4444,color:#000
+    
 ```
 
 ## Leyenda
